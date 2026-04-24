@@ -1,0 +1,73 @@
+name: Publish to PyPI
+
+# Publishes durbl-sdk to PyPI whenever a tag like v1.2.3 is pushed.
+#
+# First-time setup (one of):
+#   A) Trusted Publisher (recommended, no token):
+#      pypi.org → durbl-sdk → Settings → Publishing → Add a new pending
+#      publisher with: owner=durbl-ai, repo=durbl, workflow=publish.yml,
+#      environment=pypi
+#   B) API token:
+#      pypi.org → Account settings → API tokens → create token scoped
+#      to durbl-sdk, then in this repo's Settings → Secrets → Actions
+#      add PYPI_API_TOKEN with the value
+#
+# Then locally:
+#   git tag v0.2.2 && git push origin v0.2.2
+# and this workflow does the rest.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # required for Trusted Publisher (OIDC)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: python -m pip install --upgrade build
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # Use Trusted Publisher (OIDC) if configured. If not, fall back to
+      # PYPI_API_TOKEN. The two methods are mutually exclusive — pick one
+      # at PyPI setup time.
+      - name: Publish via Trusted Publisher
+        if: ${{ env.PYPI_API_TOKEN == '' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Publish via API token
+        if: ${{ env.PYPI_API_TOKEN != '' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
