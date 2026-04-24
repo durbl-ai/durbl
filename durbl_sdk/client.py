@@ -17,7 +17,7 @@ from durbl_sdk.resources.policies import PoliciesResource
 from durbl_sdk.resources.state import StateResource
 
 
-DEFAULT_BASE_URL = "https://durbl-server-302549088008.me-central1.run.app"
+DEFAULT_BASE_URL = "https://api.durbl.dev"
 DEFAULT_TIMEOUT = 30.0
 
 

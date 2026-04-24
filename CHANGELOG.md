@@ -2,6 +2,19 @@
 
 All notable changes to `durbl-sdk` follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-04-24
+
+### Changed
+- **Default `base_url` is back to `https://api.durbl.dev`.** The Vercel
+  edge proxy is now serving production traffic with a valid Let's Encrypt
+  certificate and forwarding to Cloud Run, so the friendlier URL is the
+  default again. The Cloud Run URL still works directly if you prefer to
+  bypass the proxy. Override via constructor or `DURBL_BASE_URL`.
+
+### Fixed
+- Sync `__version__` in `durbl_sdk/__init__.py` (was stuck at `0.2.0`),
+  so the `User-Agent` header now reports the correct release.
+
 ## [0.2.1] — 2026-04-24
 
 ### Changed
