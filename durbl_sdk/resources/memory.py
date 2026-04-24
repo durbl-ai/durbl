@@ -43,7 +43,8 @@ class MemoryResource(BaseResource):
         return self._post("/v1/memory", json={
             "entity_id": entity,
             "content": content,
-            "memory_type": type,
+            # Server expects `type` (Rust `r#type`), not `memory_type`.
+            "type": type,
             "importance": importance,
             "confidence": confidence,
             "durability": durability,
@@ -90,8 +91,11 @@ class MemoryResource(BaseResource):
             "limit": limit,
         }
         if type:
+            # Server's RecallReq doesn't filter by type yet; included for forward compat.
             body["memory_type"] = type
-        result = self._post("/v1/context/recall", json=body)
+        # Server route is /v1/memory/recall (the previous /v1/context/recall path
+        # was a stale artefact and 404'd silently).
+        result = self._post("/v1/memory/recall", json=body)
         return result.get("memories", [])
 
     # ── Async versions ───────────────────────────────────────
@@ -110,7 +114,7 @@ class MemoryResource(BaseResource):
 
     async def arecall(self, entity: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Async version of recall()."""
-        result = await self._apost("/v1/context/recall", json={
+        result = await self._apost("/v1/memory/recall", json={
             "entity_id": entity,
             "query": query,
             "limit": limit,

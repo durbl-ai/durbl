@@ -1,31 +1,10 @@
 # Durbl Python SDK
 
-The official Python client for **[Durbl](https://durbl.dev)** — the data engine that remembers.
-
-Durbl is a memory-native data engine for AI agents and applications. It gives your agents persistent context, adaptive memory, and stateful intelligence that grows with use.
-
-```python
-from durbl_sdk import Durbl
-
-client = Durbl(api_key="drbl_...")
-
-# Write a memory
-client.memory.write(
-    entity="user/ahmed",
-    content="Prefers vegetarian food",
-    type="preference",
-)
-
-# Recall it later, semantically
-results = client.memory.recall(
-    entity="user/ahmed",
-    query="What food does the user like?",
-)
-for m in results:
-    print(m["content"])
-```
-
----
+The official Python client for the [Durbl](https://durbl.dev) memory engine —
+a single backend that gives AI agents persistent, queryable memory across
+runs, sessions, and users. One API for write, recall, state, context,
+lifecycle, and signals — replacing a stack of vector DB + cache + queue +
+state store + summarizer.
 
 ## Install
 
@@ -33,103 +12,94 @@ for m in results:
 pip install durbl-sdk
 ```
 
-Requires Python **3.10+**.
-
-## Get an API key
-
-1. Sign up at **[durbl.dev](https://durbl.dev)**
-2. Open the [console](https://console.durbl.dev) → **Settings → API Keys**
-3. Copy your `drbl_...` key
-
-## Quick start
+## Quickstart
 
 ```python
 from durbl_sdk import Durbl
 
-client = Durbl(api_key="drbl_...")
+client = Durbl(api_key="drbl_...")  # or set DURBL_API_KEY
 
-# Episodic — something that happened
+# Write a memory
 client.memory.write(
     entity="user/ahmed",
-    content="Logged in from a new device in Doha",
-    type="episodic",
-)
-
-# Semantic — a fact
-client.memory.write(
-    entity="user/ahmed",
-    content="Works as a backend engineer",
-    type="semantic",
-)
-
-# Preference — how they like things
-client.memory.write(
-    entity="user/ahmed",
-    content="Prefers email over Slack",
+    content="Prefers TypeScript over JavaScript",
     type="preference",
-    importance=0.9,
+    importance=0.8,
 )
 
-# Build a context for your LLM
-context = client.context.build(
-    entity="user/ahmed",
-    goal="Write a polite reminder about an unfinished task",
-)
-print(context["assembled_context"])
+# Update entity state
+client.state.update("user/ahmed", {"plan": "pro", "seats": 5})
+
+# Recall by semantic search
+hits = client.memory.recall(entity="user/ahmed", query="language preference", limit=3)
+for m in hits:
+    print(m["content"])
+
+# Build a context window for an LLM call
+ctx = client.context.build(entity="user/ahmed", goal="suggest a stack", max_memories=10)
+print(ctx.assembled_context)
 ```
 
-## Capabilities
+## Async usage
 
-| Resource | Use |
-|---|---|
-| `client.memory` | Write / read / list / recall memories |
-| `client.context` | Build goal-aware context for LLMs |
-| `client.events` | Stream raw events into the engine |
-| `client.state` | Versioned entity state with history |
-| `client.lifecycle` | Reinforce, decay, and forget memories |
-| `client.intelligence` | Detect patterns and signals over time |
-| `client.policies` | Per-entity retention and access rules |
-
-## Async support
-
-Every method has an async twin (`amethod`):
+Every resource has an `a*` mirror that uses `httpx.AsyncClient`:
 
 ```python
 import asyncio
 from durbl_sdk import Durbl
 
 async def main():
-    client = Durbl(api_key="drbl_...")
-    results = await client.memory.arecall(
-        entity="user/ahmed",
-        query="favorite food",
-    )
-    print(results)
-    await client.aclose()
+    async with Durbl(api_key="drbl_...") as client:
+        await client.memory.awrite(entity="user/me", content="Likes coffee", type="preference")
+        state = await client.state.aget("user/me")
 
 asyncio.run(main())
 ```
 
-Or use it as an async context manager:
+## Resources
+
+| Resource | Operations |
+| --- | --- |
+| `client.memory` | `write` · `get` · `update` · `delete` · `list` · `recall` |
+| `client.state` | `get` · `update` · `history` |
+| `client.context` | `build` · `recall` |
+| `client.events` | `write` · `list` |
+| `client.intelligence` | (analytics endpoints) |
+| `client.lifecycle` | (memory lifecycle) |
+| `client.policies` | (per-project policies) |
+
+## Entity IDs
+
+Entity IDs are free-form strings and may contain `/` (`user/ahmed`,
+`team/acme/billing`). The SDK percent-encodes them automatically when
+they appear in URL paths.
+
+## Error handling
 
 ```python
-async with Durbl(api_key="drbl_...") as client:
-    await client.memory.awrite(entity="...", content="...")
+from durbl_sdk.exceptions import DurblAPIError
+
+try:
+    client.memory.write(entity="user/me", content="...")
+except DurblAPIError as e:
+    print(e.status_code, e.message)
 ```
 
 ## Examples
 
-See the [`examples/`](./examples) folder for runnable snippets.
+The [`examples/`](https://github.com/durbl-ai/durbl/tree/main/examples)
+directory has runnable sample apps:
 
-## Documentation
+- **personal_coach** — habit/goal tracker with semantic + preference memory
+- **recipe_memory** — diet/preference-aware meal suggestions
+- **support_agent** — per-customer briefs that demonstrate isolation
 
-Full API reference and guides: **[durbl.dev/docs](https://durbl.dev/docs)**
+## Links
 
-## Support
-
-- **Issues:** [github.com/durbl-ai/durbl/issues](https://github.com/durbl-ai/durbl/issues)
-- **Website:** [durbl.dev](https://durbl.dev)
+- Homepage: <https://durbl.dev>
+- Docs: <https://docs.durbl.dev>
+- Issues: <https://github.com/durbl-ai/durbl/issues>
 
 ## License
 
-Apache-2.0 — see [LICENSE](./LICENSE).
+Apache-2.0
