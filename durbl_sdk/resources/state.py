@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
+from durbl_sdk.exceptions import DurblNotFoundError
 from durbl_sdk.resources.base import BaseResource
 
 
@@ -32,11 +33,15 @@ class StateResource(BaseResource):
 
         Returns the state map directly (the server wraps it in `{"data": ...}`;
         we unwrap so callers can do ``client.state.get(entity).get("mood")``).
-        Returns ``{}`` if no state has been written yet.
+        Returns ``{}`` if no state has been written yet (404 only).
+
+        Auth, rate-limit, server, and network errors are NOT swallowed — they
+        propagate as the matching :class:`DurblError` subclass so callers can
+        distinguish "no state yet" from "the request actually failed".
         """
         try:
             raw = self._get(f"/v1/state/{_enc(entity)}")
-        except Exception:
+        except DurblNotFoundError:
             return {}
         return raw.get("data", {}) or {}
 
@@ -56,10 +61,10 @@ class StateResource(BaseResource):
         return self._get(f"/v1/state/{_enc(entity)}/history", params={"limit": limit})
 
     async def aget(self, entity: str) -> dict[str, Any]:
-        """Async version of get()."""
+        """Async version of get(). Same error semantics: only 404 → ``{}``."""
         try:
             raw = await self._aget(f"/v1/state/{_enc(entity)}")
-        except Exception:
+        except DurblNotFoundError:
             return {}
         return raw.get("data", {}) or {}
 

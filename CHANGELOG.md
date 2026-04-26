@@ -2,6 +2,17 @@
 
 All notable changes to `durbl-sdk` follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] — 2026-04-25
+
+### Fixed
+- **`state.get()` no longer swallows real errors.** The previous
+  `except Exception: return {}` masked auth, rate-limit, server, and
+  network failures as "no state yet", which made misconfigured clients
+  silently appear to work and made debugging painful. Only
+  `DurblNotFoundError` (HTTP 404) is now treated as "no state written
+  yet" — every other error propagates as the matching `DurblError`
+  subclass. Same fix applied to `state.aget()`.
+
 ## [0.2.2] — 2026-04-24
 
 ### Changed
