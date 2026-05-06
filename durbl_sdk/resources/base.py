@@ -86,9 +86,15 @@ class BaseResource:
     # ── Sync transport ───────────────────────────────────────────────
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
+        # Catch only TRANSPORT errors here (DNS / connect / read timeout /
+        # SSL handshake). The previous version caught httpx.HTTPError which
+        # is the parent class of httpx.HTTPStatusError too — that meant a
+        # 403/404 response could be misclassified as a connection error
+        # before _handle_response had a chance to map it to DurblAuthError /
+        # DurblNotFoundError. Audit Bug #6.
         try:
             response = self._client.request(method, path, **kwargs)
-        except httpx.HTTPError as exc:
+        except httpx.TransportError as exc:
             raise DurblConnectionError(f"{method} {path} failed: {exc}") from exc
         return self._handle_response(response)
 
@@ -107,9 +113,12 @@ class BaseResource:
     # ── Async transport ──────────────────────────────────────────────
 
     async def _arequest(self, method: str, path: str, **kwargs: Any) -> Any:
+        # Same fix as the sync path above — TransportError only, so HTTP
+        # status errors flow through _handle_response and get the right
+        # typed subclass. Audit Bug #6.
         try:
             response = await self._async_client.request(method, path, **kwargs)
-        except httpx.HTTPError as exc:
+        except httpx.TransportError as exc:
             raise DurblConnectionError(f"{method} {path} failed: {exc}") from exc
         return self._handle_response(response)
 

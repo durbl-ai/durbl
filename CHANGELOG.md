@@ -2,6 +2,21 @@
 
 All notable changes to `durbl-sdk` follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] — 2026-05-06
+
+### Fixed
+- **HTTP status errors no longer get misclassified as connection
+  errors.** `_request()` previously caught `httpx.HTTPError` which is
+  the parent class of `httpx.HTTPStatusError`. In some proxy / network
+  configurations a 403 from the engine would surface as
+  `DurblConnectionError("...failed: ...")` instead of the proper
+  `DurblAuthError`. Now we catch only `httpx.TransportError` (DNS,
+  connect, read timeout, SSL handshake) and let HTTP status errors
+  flow through `_handle_response` to be mapped to their typed
+  subclass: 401/403 → `DurblAuthError`, 404 → `DurblNotFoundError`,
+  429 → `DurblRateLimitError`, 5xx → `DurblServerError`. Same fix
+  applied to the async path. (Audit Bug #6.)
+
 ## [0.2.3] — 2026-04-25
 
 ### Fixed
